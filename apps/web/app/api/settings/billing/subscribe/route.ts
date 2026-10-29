@@ -1,0 +1,121 @@
+import { db } from "@cap/database";
+import { isCrossSiteCookieWrite } from "@cap/database/auth/request-site";
+import { getCurrentUser } from "@cap/database/auth/session";
+import { users } from "@cap/database/schema";
+import { serverEnv } from "@cap/env";
+import { isValidStripePlanPriceId, stripe, userIsPro } from "@cap/utils";
+import { eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import type Stripe from "stripe";
+import { parseCheckoutQuantity } from "@/lib/checkout-quantity";
+import { trackServerEvent } from "@/lib/server-analytics";
+
+export async function POST(request: NextRequest) {
+	const user = isCrossSiteCookieWrite(request) ? null : await getCurrentUser();
+	let customerId = user?.stripeCustomerId;
+	const { priceId, quantity, isOnBoarding } = await request.json();
+
+	const environment =
+		serverEnv().VERCEL_ENV === "production" ? "production" : "development";
+
+	if (
+		!priceId ||
+		typeof priceId !== "string" ||
+		!isValidStripePlanPriceId(priceId, environment)
+	) {
+		console.error("Invalid or missing priceId");
+		return Response.json(
+			{ error: true, message: "Invalid priceId" },
+			{ status: 400 },
+		);
+	}
+
+	const safeQuantity = parseCheckoutQuantity(quantity);
+	if (safeQuantity === null) {
+		console.error("Invalid quantity");
+		return Response.json(
+			{ error: true, message: "Invalid quantity" },
+			{ status: 400 },
+		);
+	}
+
+	if (!user) {
+		console.error("User not found");
+		return Response.json({ error: true, auth: false }, { status: 401 });
+	}
+
+	if (userIsPro(user)) {
+		console.error("User already has pro plan");
+		return Response.json({ error: true, subscription: true }, { status: 400 });
+	}
+
+	try {
+		if (!user.stripeCustomerId) {
+			const existingCustomers = await stripe().customers.list({
+				email: user.email,
+				limit: 1,
+			});
+
+			let customer: Stripe.Customer;
+			if (existingCustomers.data.length > 0 && existingCustomers.data[0]) {
+				customer = existingCustomers.data[0];
+
+				customer = await stripe().customers.update(customer.id, {
+					metadata: {
+						...customer.metadata,
+						userId: user.id,
+					},
+				});
+			} else {
+				customer = await stripe().customers.create({
+					email: user.email,
+					metadata: {
+						userId: user.id,
+					},
+				});
+			}
+
+			await db()
+				.update(users)
+				.set({
+					stripeCustomerId: customer.id,
+				})
+				.where(eq(users.id, user.id));
+			customerId = customer.id;
+		}
+
+		const checkoutSession = await stripe().checkout.sessions.create({
+			customer: customerId as string,
+			line_items: [{ price: priceId, quantity: safeQuantity }],
+			mode: "subscription",
+			success_url: isOnBoarding
+				? `${serverEnv().WEB_URL}/dashboard/settings/organization?upgrade=true&session_id={CHECKOUT_SESSION_ID}`
+				: `${serverEnv().WEB_URL}/dashboard/caps?upgrade=true&session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: isOnBoarding
+				? `${serverEnv().WEB_URL}/onboarding`
+				: `${serverEnv().WEB_URL}/pricing`,
+			allow_promotion_codes: true,
+			metadata: {
+				platform: "web",
+				dubCustomerId: user.id,
+				isOnBoarding: isOnBoarding ? "true" : "false",
+			},
+		});
+
+		if (checkoutSession.url) {
+			trackServerEvent(user.id, "checkout_started", {
+				price_id: priceId,
+				quantity: safeQuantity,
+				platform: "web",
+			});
+
+			return Response.json({ url: checkoutSession.url }, { status: 200 });
+		}
+
+		console.error("Checkout session created but no URL returned");
+		return Response.json({ error: true }, { status: 400 });
+	} catch (error) {
+		console.error("Error creating checkout session:", error);
+		return Response.json({ error: true }, { status: 500 });
+	}
+}
