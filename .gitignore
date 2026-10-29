@@ -80,3 +80,6 @@ analysis/plans/
 tmp/
 
 __pycache__/
+
+infra/selfhost/.env
+infra/selfhost/downloads/

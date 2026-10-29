@@ -1,0 +1,11 @@
+{$WEB_HOST} {
+	handle_path /download/* {
+		root * /srv/downloads
+		file_server browse
+	}
+	reverse_proxy web:3000
+}
+
+{$S3_HOST} {
+	reverse_proxy minio:9000
+}

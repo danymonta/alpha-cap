@@ -1,0 +1,97 @@
+name: alpha-loom
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      WEB_HOST: ${WEB_HOST}
+      S3_HOST: ${S3_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./downloads:/srv/downloads:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - minio
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/railway/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      DATABASE_URL: mysql://cap:${MYSQL_PASSWORD}@mysql:3306/cap
+      WEB_URL: https://${WEB_HOST}
+      NEXTAUTH_URL: https://${WEB_HOST}
+      DATABASE_ENCRYPTION_KEY: ${DATABASE_ENCRYPTION_KEY}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      CAP_AWS_ACCESS_KEY: capadmin
+      CAP_AWS_SECRET_KEY: ${MINIO_PASSWORD}
+      CAP_AWS_BUCKET: cap
+      CAP_AWS_REGION: us-east-1
+      S3_PUBLIC_ENDPOINT: https://${S3_HOST}
+      S3_INTERNAL_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE: "true"
+      MEDIA_SERVER_URL: http://media-server:3456
+      MEDIA_SERVER_WEBHOOK_SECRET: ${MEDIA_SERVER_WEBHOOK_SECRET}
+      MEDIA_SERVER_WEBHOOK_URL: http://web:3000
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_DOMAIN: ${RESEND_FROM_DOMAIN:-}
+
+  media-server:
+    build:
+      context: ../../apps/media-server
+      dockerfile: Dockerfile.standalone
+    restart: unless-stopped
+    environment:
+      PORT: 3456
+      MEDIA_SERVER_WEBHOOK_SECRET: ${MEDIA_SERVER_WEBHOOK_SECRET}
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cap
+      MYSQL_USER: cap
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command:
+      - "--max_connections=1000"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "cap", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  minio:
+    build:
+      context: ../railway
+      dockerfile: minio.Dockerfile
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: capadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+      S3_BUCKET: cap
+    volumes:
+      - minio-data:/data
+
+volumes:
+  caddy-data:
+  caddy-config:
+  mysql-data:
+  minio-data:
