@@ -9,7 +9,25 @@
 @tailwind components;
 @tailwind utilities;
 
-.dark {
+:root,
+.light,
+.light-theme {
+	--blue-1: #fffcfc;
+	--blue-2: #fff7f7;
+	--blue-3: #fdf1f1;
+	--blue-4: #fbe3e3;
+	--blue-5: #f6d0d0;
+	--blue-6: #efbaba;
+	--blue-7: #e39c9c;
+	--blue-8: #d47a7a;
+	--blue-9: #780000;
+	--blue-10: #650000;
+	--blue-11: #8a0f0f;
+	--blue-12: #3d0000;
+}
+
+.dark,
+.dark-theme {
 	--blue-1: #160808;
 	--blue-2: #1e0a0a;
 	--blue-3: #2a0c0c;
@@ -34,18 +52,6 @@
 	--tertiary: #f6d0d0;
 	--tertiary-2: #fbe3e3;
 	--tertiary-3: #fdf1f1;
-	--blue-1: #fffcfc;
-	--blue-2: #fff7f7;
-	--blue-3: #fdf1f1;
-	--blue-4: #fbe3e3;
-	--blue-5: #f6d0d0;
-	--blue-6: #efbaba;
-	--blue-7: #e39c9c;
-	--blue-8: #d47a7a;
-	--blue-9: #780000;
-	--blue-10: #650000;
-	--blue-11: #8a0f0f;
-	--blue-12: #3d0000;
 	--filler: #efefef;
 	--filler-2: #e4e4e4;
 	--filler-3: #e2e2e2;
