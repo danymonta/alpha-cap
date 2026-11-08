@@ -34,10 +34,9 @@ export default function Footer({
 				</Text>
 			) : (
 				<Text className="text-[12px] leading-6 text-gray-500">
-					This email was intended for{" "}
-					<span className="text-black">{email}</span>. If you were not expecting
-					this email, you can ignore this email. If you are concerned about your
-					account's safety, please reply to this email to get in touch with us.
+					Questa email era destinata a{" "}
+					<span className="text-black">{email}</span>. Se non te la aspettavi,
+					puoi ignorarla.
 				</Text>
 			)}
 		</Tailwind>

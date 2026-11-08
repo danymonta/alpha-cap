@@ -1,11 +1,9 @@
-import { CAP_LOGO_URL } from "@cap/utils";
 import {
 	Body,
 	Container,
 	Head,
 	Heading,
 	Html,
-	Img,
 	Preview,
 	Section,
 	Tailwind,
@@ -23,28 +21,23 @@ export function OTPEmail({
 	return (
 		<Html>
 			<Head />
-			<Preview>Your Cap Verification Code: {code}</Preview>
+			<Preview>Il tuo codice di accesso ad Alpha Loom: {code}</Preview>
 			<Tailwind>
 				<Body className="mx-auto my-auto bg-gray-1 font-sans">
 					<Container className="mx-auto my-10 max-w-[500px] rounded border border-solid border-gray-200 px-10 py-5">
 						<Section className="mt-8">
-							<Img
-								src={CAP_LOGO_URL}
-								width="40"
-								height="40"
-								alt="Cap"
-								className="mx-auto my-0"
-							/>
+							<Text className="m-0 text-center text-2xl font-bold text-[#780000]">
+								Alpha Loom
+							</Text>
 						</Section>
 						<Heading className="mx-0 my-7 p-0 text-center text-xl font-semibold text-black">
-							Your Verification Code
+							Il tuo codice di accesso
 						</Heading>
 						<Text className="text-sm leading-6 text-black">
-							Welcome to Cap!
+							Benvenuto in Alpha Loom!
 						</Text>
 						<Text className="text-sm leading-6 text-black">
-							Please use the following verification code to sign in to your
-							account:
+							Usa questo codice per accedere al tuo account:
 						</Text>
 						<Section className="my-8 text-center">
 							<div className="rounded-lg bg-gray-100 px-8 py-6">
@@ -54,8 +47,8 @@ export function OTPEmail({
 							</div>
 						</Section>
 						<Text className="text-sm leading-6 text-black">
-							This code will expire in 10 minutes. If you didn't request this
-							code, you can safely ignore this email.
+							Il codice scade tra 10 minuti. Se non l'hai richiesto tu, puoi
+							ignorare questa email.
 						</Text>
 						<Footer email={email} />
 					</Container>

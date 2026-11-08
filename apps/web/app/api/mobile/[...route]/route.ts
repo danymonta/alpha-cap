@@ -178,7 +178,7 @@ const sendMobileEmailCode = async (email: string, code: string) => {
 
 	const delivery = await sendEmail({
 		email,
-		subject: "Your Cap Verification Code",
+		subject: "Il tuo codice di accesso ad Alpha Loom",
 		react: OTPEmail({ code, email }),
 	});
 	if (delivery?.error) {
