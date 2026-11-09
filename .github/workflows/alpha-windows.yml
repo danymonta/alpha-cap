@@ -1,0 +1,66 @@
+name: Alpha Loom Windows
+
+# Unsigned Windows installer for Alpha Loom, built on demand. Mirrors the
+# Windows path of desktop-release.yml without SignPath, updater signing or
+# release publishing.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      TARGET: x86_64-pc-windows-msvc
+      RUST_TARGET_TRIPLE: x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: alpha-windows
+          cache-on-failure: true
+          workspaces: |
+            . -> target
+            apps/desktop-gpui -> target
+
+      - uses: ./.github/actions/setup-js
+
+      - name: Run cap-setup
+        shell: bash
+        run: bun run cap-setup
+
+      - name: Build desktop binaries
+        shell: bash
+        env:
+          CARGO_PROFILE_RELEASE_DEBUG: "0"
+          CARGO_PROFILE_RELEASE_STRIP: symbols
+        run: ./scripts/build-desktop-binaries.sh "$TARGET"
+
+      - name: Increase pagefile size
+        uses: al-cheb/configure-pagefile-action@a3b6ebd6b634da88790d9c58d4b37a7f4a7b8708 # v1.4
+        with:
+          minimum-size: 16GB
+          maximum-size: 24GB
+          disk-root: "D:"
+
+      - name: Build and bundle installer
+        shell: bash
+        env:
+          CI: false
+        run: node scripts/bundle-gpui.mjs "$TARGET" --bundles nsis
+
+      - name: Upload installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: alpha-loom-windows
+          path: apps/desktop-gpui/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 14
