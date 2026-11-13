@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import { requirePersonalFolder } from "@/actions/folders/require-personal-folder";
 import { requireOrganizationAccess } from "@/actions/organization/authorization";
 import { runPromise } from "@/lib/server";
+import { isStorageFull, STORAGE_FULL_MESSAGE } from "@/lib/storage-quota";
 
 export interface CreateForProcessingResult {
 	id: Video.VideoId;
@@ -60,6 +61,8 @@ export async function createVideoForServerProcessing({
 	) {
 		throw new Error("upgrade_required");
 	}
+
+	if (await isStorageFull()) throw new Error(STORAGE_FULL_MESSAGE);
 
 	await requireOrganizationAccess(user.id, orgId);
 	if (folderId) await requirePersonalFolder(user.id, orgId, folderId);

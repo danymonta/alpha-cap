@@ -9,11 +9,13 @@ import { AuthContextProvider } from "@/app/Layout/AuthContext";
 import { resolveCurrentUser } from "@/app/Layout/current-user";
 import { runPromise } from "@/lib/server";
 import { getShareableLinkUsage } from "@/lib/shareable-link-quota";
+import { getStorageUsage } from "@/lib/storage-quota";
 import DashboardInner from "./_components/DashboardInner";
 import { DashboardPasteImport } from "./_components/DashboardPasteImport";
 import MobileTab from "./_components/MobileTab";
 import DesktopNav from "./_components/Navbar/Desktop";
 import MobileNav from "./_components/Navbar/Mobile";
+import { StorageWarning } from "./_components/StorageWarning";
 import { DashboardContexts } from "./Contexts";
 import { UploadingProvider } from "./caps/UploadingContext";
 import {
@@ -61,6 +63,11 @@ export default async function DashboardLayout({
 				})
 			: null;
 
+	const storageUsagePromise = getStorageUsage().catch((error) => {
+		console.error("Failed to load storage usage", error);
+		return null;
+	});
+
 	const pendingInviteId = await pendingInviteIdPromise;
 	if (pendingInviteId) redirect(`/invite/${pendingInviteId}`);
 
@@ -93,6 +100,7 @@ export default async function DashboardLayout({
 	}
 
 	const shareableLinkUsage = await shareableLinkUsagePromise;
+	const storageUsage = await storageUsagePromise;
 
 	let activeOrganization = organizationSelect.find(
 		(organization) =>
@@ -128,7 +136,10 @@ export default async function DashboardLayout({
 						<DesktopNav />
 						<div className="flex h-full [grid-area:main] focus:outline-none">
 							<MobileNav />
-							<DashboardInner>{children}</DashboardInner>
+							<DashboardInner>
+								<StorageWarning usage={storageUsage} />
+								{children}
+							</DashboardInner>
 						</div>
 						<MobileTab />
 					</div>

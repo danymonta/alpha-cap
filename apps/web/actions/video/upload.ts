@@ -19,6 +19,7 @@ import { revalidatePath } from "next/cache";
 import { requirePersonalFolder } from "@/actions/folders/require-personal-folder";
 import { requireOrganizationAccess } from "@/actions/organization/authorization";
 import { runPromise } from "@/lib/server";
+import { isStorageFull, STORAGE_FULL_MESSAGE } from "@/lib/storage-quota";
 
 const MAX_S3_DELETE_ATTEMPTS = 3;
 const S3_DELETE_RETRY_BACKOFF_MS = 250;
@@ -146,6 +147,9 @@ export async function createVideoAndGetUploadUrl({
 	try {
 		if (!userIsPro(user) && duration && duration > 300)
 			throw new Error("upgrade_required");
+
+		if (!videoId && !isScreenshot && (await isStorageFull()))
+			throw new Error(STORAGE_FULL_MESSAGE);
 
 		await requireOrganizationAccess(user.id, orgId);
 

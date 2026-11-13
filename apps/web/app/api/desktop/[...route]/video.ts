@@ -27,6 +27,7 @@ import { invalidateGoogleDriveStorageQuotaCache } from "@/lib/google-drive-stora
 import { maybeStartLiveTranscription } from "@/lib/live-transcribe";
 import { runPromise } from "@/lib/server";
 import { trackServerEvent } from "@/lib/server-analytics";
+import { isStorageFull, STORAGE_FULL_MESSAGE } from "@/lib/storage-quota";
 import {
 	GOOGLE_DRIVE_UPLOAD_FEATURE,
 	hasDesktopFeature,
@@ -115,6 +116,16 @@ app.get(
 
 			if (!isCapPro && durationInSecs && durationInSecs > /* 5 min */ 5 * 60)
 				return c.json({ error: "upgrade_required" }, { status: 403 });
+
+			if (
+				(videoId === undefined || createWithId) &&
+				!isScreenshot &&
+				(await isStorageFull())
+			)
+				return c.json(
+					{ error: "storage_full", message: STORAGE_FULL_MESSAGE },
+					{ status: 507 },
+				);
 
 			console.log("Video create request:", {
 				recordingMode,
