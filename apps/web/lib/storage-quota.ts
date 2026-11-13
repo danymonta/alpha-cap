@@ -1,5 +1,3 @@
-import "server-only";
-
 import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { serverEnv } from "@cap/env";
 
@@ -18,9 +16,9 @@ function limitBytes() {
 	return (Number.isFinite(gb) && gb > 0 ? gb : 20) * 1_000_000_000;
 }
 
-async function measureUsedBytes() {
+export function createStorageClient() {
 	const env = serverEnv();
-	const client = new S3Client({
+	return new S3Client({
 		endpoint: env.S3_INTERNAL_ENDPOINT ?? env.S3_PUBLIC_ENDPOINT,
 		region: env.CAP_AWS_REGION,
 		forcePathStyle: env.S3_PATH_STYLE,
@@ -32,6 +30,11 @@ async function measureUsedBytes() {
 					}
 				: undefined,
 	});
+}
+
+async function measureUsedBytes() {
+	const env = serverEnv();
+	const client = createStorageClient();
 
 	let total = 0;
 	let token: string | undefined;

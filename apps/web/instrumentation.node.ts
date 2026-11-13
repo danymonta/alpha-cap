@@ -46,6 +46,9 @@ export async function register() {
 	// Add a timeout to trigger migrations after 5 seconds on server start
 	setTimeout(() => triggerMigrations(), 5000);
 	setTimeout(() => createS3Bucket(), 5000);
+
+	const { scheduleVideoRetention } = await import("./lib/video-retention");
+	scheduleVideoRetention();
 }
 
 async function createS3Bucket() {
